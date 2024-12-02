@@ -435,6 +435,7 @@ func TestCopy(t *testing.T) {
 
 	testCases := []struct {
 		dbName       string
+		testCase     string
 		setupQueries []setupQuery
 		src          string
 		dest         string
@@ -449,7 +450,8 @@ func TestCopy(t *testing.T) {
 			dest: "staff_copy",
 		},
 		{
-			dbName: "pgsql",
+			dbName:   "pgsql",
+			testCase: "schemaInDest",
 			setupQueries: []setupQuery{
 				{query: "DROP TABLE staff_copy"},
 				{query: "CREATE TABLE staff_copy AS SELECT * FROM staff WHERE 0=1", check: true},
@@ -467,7 +469,8 @@ func TestCopy(t *testing.T) {
 			dest: "staff_copy",
 		},
 		{
-			dbName: "pgx",
+			dbName:   "pgx",
+			testCase: "schemaInDest",
 			setupQueries: []setupQuery{
 				{query: "DROP TABLE staff_copy"},
 				{query: "CREATE TABLE staff_copy AS SELECT * FROM staff WHERE 0=1", check: true},
@@ -483,6 +486,17 @@ func TestCopy(t *testing.T) {
 			},
 			src:  "select staff_id, first_name, last_name, address_id, picture, email, store_id, active, username, password, last_update from staff",
 			dest: "staff_copy(staff_id, first_name, last_name, address_id, picture, email, store_id, active, username, password, last_update)",
+		},
+		{
+			dbName:   "mysql",
+			testCase: "bulkCopy",
+			setupQueries: []setupQuery{
+				{query: "SET GLOBAL local_infile = ON"},
+				{query: "DROP TABLE staff_copy"},
+				{query: "CREATE TABLE staff_copy AS SELECT * FROM staff WHERE 0=1", check: true},
+			},
+			src:  "select staff_id, first_name, last_name, address_id, email, store_id, active, username, password, last_update from staff",
+			dest: "staff_copy(staff_id, first_name, last_name, address_id, email, store_id, active, username, password, last_update)",
 		},
 		{
 			dbName: "sqlserver",
@@ -508,7 +522,11 @@ func TestCopy(t *testing.T) {
 			continue
 		}
 
-		t.Run(test.dbName, func(t *testing.T) {
+		testName := test.dbName
+		if test.testCase != "" {
+			testName += "-" + test.testCase
+		}
+		t.Run(testName, func(t *testing.T) {
 
 			// TODO test copy from a different DB, maybe csvq?
 			// TODO test copy from same DB
