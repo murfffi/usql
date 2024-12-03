@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	dt "github.com/ory/dockertest/v3"
 	dc "github.com/ory/dockertest/v3/docker"
@@ -426,7 +425,10 @@ func TestCopy(t *testing.T) {
 	// setup test data, ignoring errors, since there'll be duplicates
 	_, _ = pg.DB.Exec("ALTER TABLE staff DROP CONSTRAINT staff_address_id_fkey")
 	_, _ = pg.DB.Exec("ALTER TABLE staff DROP CONSTRAINT staff_store_id_fkey")
-	_, _ = pg.DB.Exec("INSERT INTO staff VALUES (1, 'John', 'Doe', 1, 'john@invalid.com', 1, true, 'jdoe', 'abc', now(), 'abcd')")
+	_, _ = pg.DB.Exec(`
+		INSERT INTO staff (first_name, last_name, address_id, email, store_id, active, username, password, last_update) 
+		SELECT 'John', 'Doe', 1, 'john@invalid.com', 1, true, 'jdoe', 'abc', now() FROM generate_series(1,1000000)
+		`)
 
 	type setupQuery struct {
 		query string
@@ -542,9 +544,11 @@ func TestCopy(t *testing.T) {
 				t.Fatalf("Could not get rows to copy: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			var rlen int64 = 1
+			//ctx, cancel :=  context.WithTimeout(context.Background(), 5*time.Second)
+			//defer cancel()
+			ctx := context.Background()
+
+			var rlen int64 = 1000000
 			n, err := drivers.Copy(ctx, db.URL, nil, nil, rows, test.dest)
 			if err != nil {
 				t.Fatalf("Could not copy: %v", err)
